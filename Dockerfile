@@ -2,7 +2,7 @@ FROM registry.redhat.io/rhscl/php-72-rhel7
 
 USER root
 
-RUN subscription-manager register --username raul.dourado --password TcmRH@-2019
+RUN subscription-manager register --username <USERNAME> --password <PASSWORD>
 RUN subscription-manager attach --auto
 RUN yum-config-manager --enable remi-php72
 
