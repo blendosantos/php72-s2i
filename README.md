@@ -36,47 +36,20 @@ Create a *save-artifacts* script which allows a new build to reuse content from 
 ##### usage (optional) 
 Create a *usage* script that will print out instructions on how to use the image.
 
-##### Make the scripts executable 
-Make sure that all of the scripts are executable by running *chmod +x s2i/bin/**
+#### Create the builder image and push
+Alterar os parâmetros <USERNAME> e <PASSWORD> no arquivo Dockerfile antes do build
 
-#### Create the builder image
-The following command will create a builder image named php72-s2i based on the Dockerfile that was created previously.
-```
-docker build -t php72-s2i .
-```
-The builder image can also be created by using the *make* command since a *Makefile* is included.
+oc login https://tcm-ocp.tcmba.net:8443
 
-Once the image has finished building, the command *s2i usage php72-s2i* will print out the help info that was defined in the *usage* script.
+podman login registry.redhat.io
 
-#### Testing the builder image
-The builder image can be tested using the following commands:
-```
-docker build -t php72-s2i-candidate .
-IMAGE_NAME=php72-s2i-candidate test/run
-```
-The builder image can also be tested by using the *make test* command since a *Makefile* is included.
+OCP_REGISTRY=`oc get route docker-registry -n default -o 'jsonpath={.spec.host}{"\n"}'`
 
-#### Creating the application image
-The application image combines the builder image with your applications source code, which is served using whatever application is installed via the *Dockerfile*, compiled using the *assemble* script, and run using the *run* script.
-The following command will create the application image:
-```
-s2i build test/test-app php72-s2i php72-s2i-app
----> Building and installing application from source...
-```
-Using the logic defined in the *assemble* script, s2i will now create an application image using the builder image as a base and including the source code from the test/test-app directory. 
+podman login -u $(oc whoami) -p $(oc whoami -t) ${OCP_REGISTRY} --tls-verify=false
 
-#### Running the application image
-Running the application image is as simple as invoking the docker run command:
-```
-docker run -d -p 8080:8080 php72-s2i-app
-```
-The application, which consists of a simple static web page, should now be accessible at  [http://localhost:8080](http://localhost:8080).
+podman build -t $OCP_REGISTRY/openshift/php:7.2-apache -f Dockerfile
 
-#### Using the saved artifacts script
-Rebuilding the application using the saved artifacts can be accomplished using the following command:
-```
-s2i build --incremental=true test/test-app nginx-centos7 nginx-app
----> Restoring build artifacts...
----> Building and installing application from source...
-```
-This will run the *save-artifacts* script which includes the custom code to backup the currently running application source, rebuild the application image, and then re-deploy the previously saved source using the *assemble* script.
+podman push $OCP_REGISTRY/openshift/php:7.2-apache --tls-verify=false
+
+
+
